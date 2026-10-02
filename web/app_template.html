@@ -245,6 +245,7 @@
         </label>
         <label class="field"><b>Broker / importer</b>
           <select id="importer">
+            <option value="csv">Generic CSV (any bank or broker)</option>
             <option value="ibkr">Interactive Brokers (Flex Query XML)</option>
             <option value="schwab">Charles Schwab (statement exports)</option>
             <option value="fidelity">Fidelity (experimental)</option>
@@ -613,10 +614,10 @@ const SETTINGS_KEY = "osa.settings.v1";
 const defaultSettings = () => ({
   acknowledged: false,
   fullName: "",
-  canton: "ZH",
+  canton: "TI",
   taxYear: new Date().getFullYear() - 1,
-  language: "de",
-  importer: "ibkr",
+  language: "it",
+  importer: "csv",
   taxLevel: "kursliste",
   accounts: [],
   tomlCustom: false,
@@ -866,7 +867,29 @@ function wireDrop(dropId, inputId, handler) {
 wireDrop("dropKursliste", "fileKursliste", addKurslisteFiles);
 
 /* ====================== step 4: broker files =========================== */
+const CSV_TEMPLATE = [
+  "tipo;data;conto;deposito;isin;valor;descrizione;categoria;valuta;quantita;prezzo;importo;data_ex;ritenuta;paese",
+  "CONTO;2024-12-31;CH9300762011623852957;;;;Conto privato;;CHF;;;14000;;;",
+  "INTERESSE;2024-06-30;CH9300762011623852957;;;;;;CHF;;;12.50;;;",
+  "DEBITO;2024-12-31;CH5604835012345678009;;;;Ipoteca;;CHF;;;250000;;;",
+  "INTERESSE_PASSIVO;2024-12-31;CH5604835012345678009;;;;;;CHF;;;3750;;;",
+  "SPESA;2024-12-31;;123;;;Spese di deposito;22;CHF;;;80;;;",
+  "SALDO_INIZIALE;2024-01-01;;123;CH0010645932;1064593;Givaudan;AZIONE;CHF;1;;;;;",
+  "ACQUISTO;2024-05-02;;123;CH0010645932;1064593;;;CHF;2;3900;;;;",
+  "DIVIDENDO;2024-03-27;;123;CH0010645932;1064593;;;CHF;1;;68.00;2024-03-25;23.80;",
+  "SALDO_FINALE;2024-12-31;;123;CH0010645932;1064593;;;CHF;3;;;;;",
+].join("\n") + "\n";
+const CSV_TEMPLATE_HREF = "data:text/csv;charset=utf-8," + encodeURIComponent(CSV_TEMPLATE);
+
 const BROKER_INFO = {
+  csv: {
+    lead: "Generic CSV: one file with one row per balance, trade, interest, dividend or expense.",
+    help: 'Fill in the CSV format described in <code>docs/importer_csv.md</code> ' +
+      '(<a download="modello_estratto.csv" href="' + CSV_TEMPLATE_HREF + '">download a template</a>). ' +
+      "Amounts are gross, in the original currency; exchange rates and tax values come from the Kursliste. " +
+      "If the file has errors, the log lists every wrong row with its line number.",
+    accept: ".csv,.txt", multiple: false,
+  },
   ibkr: {
     lead: "Interactive Brokers: one Flex Query XML file covering the whole tax year.",
     help: 'Create a Flex Query with the sections described in the <a target="_blank" rel="noopener" ' +
@@ -992,6 +1015,8 @@ function runBlockers() {
   if (state.engine !== "ready") problems.push("The Python engine is still loading (see the bar below).");
   if (!state.kurslisteFiles.length) problems.push("No Kursliste file added (step 3).");
   if (!state.brokerFiles.length) problems.push("No broker files added (step 4).");
+  if (settings.importer === "csv" && state.brokerFiles.length > 1)
+    problems.push("The CSV importer expects a single CSV file.");
   if (settings.importer === "ibkr" && state.brokerFiles.length > 1)
     problems.push("The IBKR importer expects a single Flex Query XML file.");
   if (ACCOUNTS_REQUIRED[settings.importer] && !settings.tomlCustom &&
@@ -1042,7 +1067,7 @@ $("btnRun").onclick = async () => {
       taxYear: settings.taxYear,
       taxLevel: settings.taxLevel,
       configToml: effectiveToml(),
-      singleInputFile: settings.importer === "ibkr",
+      singleInputFile: settings.importer === "ibkr" || settings.importer === "csv",
       brokerFiles: await Promise.all(state.brokerFiles.map(toBuf)),
       kurslisteFiles: await Promise.all(state.kurslisteFiles.map(toBuf)),
       preAmble: await Promise.all(Array.from($("filePre").files).map(toBuf)),
