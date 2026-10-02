@@ -68,6 +68,8 @@ I nomi delle colonne si possono scrivere anche in inglese (`type`, `date`, `acco
 - Un conto deve avere sempre la stessa valuta. Per un conto multivaluta si usa una riga per valuta, con un `conto` diverso, ad esempio `CH93…-USD`.
 - Basta indicare `descrizione` e `categoria` alla prima riga di ogni titolo.
 - `SALDO_INIZIALE` e `SALDO_FINALE` sono facoltativi se i movimenti bastano a ricostruire le posizioni. Se ci sono, il programma controlla che saldo iniziale più movimenti sia uguale al saldo finale e segnala le differenze.
+- Tutte le date devono cadere nell'anno fiscale scelto (`--tax-year`). Le righe di altri anni vengono rifiutate, perché e-tax accetta solo estratti del proprio periodo fiscale.
+- Se `institution_name` non è indicato, sull'estratto compare "Estratto da file CSV".
 - Tutti gli errori vengono riportati insieme, con il numero di riga, così si possono correggere in una volta sola.
 
 ## Esempio

@@ -142,3 +142,24 @@ def test_unknown_expense_code_is_rejected():
     csv = HEADER + "SPESA;2024-03-01;;123;;;Custody fee;50;CHF;;;10.81;;;\n"
     with pytest.raises(CsvImportError, match="codice eCH-0196"):
         _importer().import_text(csv)
+
+
+def test_rows_outside_the_tax_period_are_rejected():
+    csv = (
+        HEADER
+        + "CONTO;2023-12-31;CH9300762011623852957;;;;;;CHF;;;1;;;\n"
+        + "INTERESSE;2025-01-02;CH9300762011623852957;;;;;;CHF;;;1;;;\n"
+    )
+    with pytest.raises(CsvImportError) as excinfo:
+        _importer().import_text(csv)
+
+    problems = excinfo.value.problems
+    assert len(problems) == 2
+    assert problems[0].startswith("riga 2 (CONTO): la data 31.12.2023 è fuori dal periodo")
+
+
+def test_missing_institution_name_gets_a_non_empty_default():
+    csv = HEADER + "CONTO;2024-12-31;CH9300762011623852957;;;;;;CHF;;;1;;;\n"
+    statement = _importer().import_text(csv)
+
+    assert statement.institution.name == "Estratto da file CSV"

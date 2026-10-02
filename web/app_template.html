@@ -229,6 +229,9 @@
         <label class="field"><b>Full name</b>
           <input type="text" id="fullName" placeholder="Maxine Muster" autocomplete="name">
         </label>
+        <label class="field"><b>Bank / institution</b>
+          <input type="text" id="institutionName" placeholder="e.g. Banca dello Stato (CSV importer only)">
+        </label>
         <label class="field"><b>Canton</b>
           <select id="canton"></select>
         </label>
@@ -614,6 +617,7 @@ const SETTINGS_KEY = "osa.settings.v1";
 const defaultSettings = () => ({
   acknowledged: false,
   fullName: "",
+  institutionName: "",
   canton: "TI",
   taxYear: new Date().getFullYear() - 1,
   language: "it",
@@ -661,6 +665,8 @@ function generateToml() {
   if (settings.canton) lines.push("canton = " + tomlStr(settings.canton));
   if (settings.fullName) lines.push("full_name = " + tomlStr(settings.fullName));
   lines.push("language = " + tomlStr(settings.language));
+  if (settings.importer === "csv" && settings.institutionName)
+    lines.push("institution_name = " + tomlStr(settings.institutionName));
   if (EXPERIMENTAL[settings.importer]) lines.push("experimental_importers = true");
   const accts = settings.accounts.filter((a) => a.number);
   accts.forEach((a, i) => {
@@ -727,6 +733,7 @@ function bindField(id, key, isNumber) {
   };
 }
 bindField("fullName", "fullName");
+bindField("institutionName", "institutionName");
 bindField("canton", "canton");
 bindField("taxYear", "taxYear", true);
 bindField("language", "language");
@@ -885,6 +892,8 @@ const BROKER_INFO = {
   csv: {
     lead: "Generic CSV: one file with one row per balance, trade, interest, dividend or expense.",
     help: 'Fill in the CSV format described in <code>docs/importer_csv.md</code> ' +
+      "with dates inside the tax year chosen in step 2 (rows from other years are rejected, " +
+      "and the tax software only accepts statements for its own tax year). " +
       '(<a download="modello_estratto.csv" href="' + CSV_TEMPLATE_HREF + '">download a template</a>). ' +
       "Amounts are gross, in the original currency; exchange rates and tax values come from the Kursliste. " +
       "If the file has errors, the log lists every wrong row with its line number.",

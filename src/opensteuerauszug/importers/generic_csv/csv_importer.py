@@ -178,6 +178,10 @@ _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 _COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
 
 
+# Used when no institution name is configured; tax software may reject an empty name.
+DEFAULT_INSTITUTION_NAME = "Estratto da file CSV"
+
+
 class CsvImportError(ValueError):
     """Raised when the CSV file has one or more invalid rows."""
 
@@ -336,7 +340,9 @@ class CsvImporter:
 
     def import_text(self, text: str) -> TaxStatement:
         rows = read_csv_rows(text)
-        problems: List[str] = []
+        problems: List[str] = self._check_period(rows)
+        if problems:
+            raise CsvImportError(problems)
 
         accounts: Dict[str, _Account] = {}
         liabilities: Dict[str, _Account] = {}
@@ -399,7 +405,7 @@ class CsvImporter:
             listOfSecurities=None,
             listOfBankAccounts=None,
         )
-        statement.institution = Institution(name=self.institution_name)
+        statement.institution = Institution(name=self.institution_name or DEFAULT_INSTITUTION_NAME)
         canton = parse_swiss_canton(self.canton)
         if canton:
             statement.canton = canton
@@ -439,6 +445,18 @@ class CsvImporter:
                 expense=sorted(expenses, key=lambda e: e.referenceDate or self.period_to)
             )
         return statement
+
+    def _check_period(self, rows: List[CsvRow]) -> List[str]:
+        """Every row must fall inside the tax period; tax software rejects other years."""
+        problems = []
+        for row in rows:
+            d = _parse_date(row.get("data"))
+            if not self.period_from <= d <= self.period_to:
+                problems.append(
+                    f"riga {row.line} ({row.kind}): la data {d:%d.%m.%Y} è fuori dal periodo "
+                    f"fiscale {self.period_from:%d.%m.%Y}-{self.period_to:%d.%m.%Y}"
+                )
+        return problems
 
     # ------------------------------------------------------------------
     # Row handlers
