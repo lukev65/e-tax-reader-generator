@@ -28,7 +28,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast, get_args
 
 from opensteuerauszug.importers.common import (
     PositionHints,
@@ -48,6 +48,7 @@ from opensteuerauszug.model.ech0196 import (
     BankAccountTaxValue,
     DepotNumber,
     Expense,
+    ExpenseType,
     Institution,
     ISINType,
     LiabilityAccount,
@@ -169,8 +170,8 @@ _PAYMENT_LABELS = {
 }
 
 # eCH-0196 expenseType used when the CSV gives no numeric code in ``categoria``.
-_DEFAULT_EXPENSE_TYPE = "99"
-_EXPENSE_TYPE_RE = re.compile(r"^(\d{1,2})$")
+_DEFAULT_EXPENSE_TYPE: ExpenseType = "99"
+_EXPENSE_TYPES = set(get_args(ExpenseType))
 
 _ISIN_RE = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
@@ -305,7 +306,7 @@ def _check_formats(row: CsvRow) -> List[str]:
                 "(AZIONE, FONDO, OBBLIGAZIONE, OPZIONE, STRUTTURATO, ALTRO)"
             )
     if row.kind == "SPESA" and row.get("categoria"):
-        if not _EXPENSE_TYPE_RE.match(row.get("categoria")):
+        if row.get("categoria") not in _EXPENSE_TYPES:
             problems.append(f"{prefix}: per le spese 'categoria' è il codice eCH-0196 (1-44 o 99)")
     return problems
 
@@ -367,7 +368,11 @@ class CsvImporter:
                         ),
                         amountCurrency=currency,
                         amount=abs(amount),
-                        expenseType=row.get("categoria") or _DEFAULT_EXPENSE_TYPE,
+                        expenseType=(
+                            cast(ExpenseType, row.get("categoria"))
+                            if row.get("categoria")
+                            else _DEFAULT_EXPENSE_TYPE
+                        ),
                     )
                 )
             else:

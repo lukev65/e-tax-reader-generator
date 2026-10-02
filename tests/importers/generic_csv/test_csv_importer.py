@@ -136,3 +136,9 @@ def test_expenses_are_converted_to_chf_and_totalled():
     # DummyExchangeRateProvider converts every foreign currency at 0.5
     assert expenses[1].expenses == Decimal("3.89")
     assert statement.listOfExpenses.totalExpenses == Decimal("14.70")
+
+
+def test_unknown_expense_code_is_rejected():
+    csv = HEADER + "SPESA;2024-03-01;;123;;;Custody fee;50;CHF;;;10.81;;;\n"
+    with pytest.raises(CsvImportError, match="codice eCH-0196"):
+        _importer().import_text(csv)
