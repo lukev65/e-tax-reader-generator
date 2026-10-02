@@ -4,6 +4,7 @@ from opensteuerauszug.model.ech0196 import (
     BankAccount,
     BankAccountTaxValue,
     BankAccountPayment,
+    Expense,
     LiabilityAccountTaxValue,
     LiabilityAccountPayment,
     Security,
@@ -224,6 +225,28 @@ class MinimalTaxValueCalculator(BaseCalculator):
             if chf_amount is not None and chf_amount != Decimal(0):
                 # Liabilities are considered Type B for revenue purposes
                 self._set_field_value(lia_payment, "grossRevenueB", chf_amount, path_prefix)
+
+    def _handle_Expense(self, expense: Expense, path_prefix: str) -> None:
+        """Converts an expense amount to CHF and sets ``expenses``."""
+        if expense.amountCurrency and expense.amount is not None:
+            if expense.referenceDate is None:
+                raise ValueError(
+                    f"Expense at {path_prefix} has an amount but no referenceDate. Cannot determine exchange rate."
+                )
+            chf_amount, rate = self._convert_to_chf(
+                expense.amount,
+                expense.amountCurrency,
+                f"{path_prefix}.exchangeRate",
+                expense.referenceDate,
+            )
+            self._set_field_value(expense, "exchangeRate", rate, path_prefix)
+            if chf_amount is not None:
+                self._set_field_value(
+                    expense,
+                    "expenses",
+                    chf_amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                    path_prefix,
+                )
 
     def _handle_Security(self, security: Security, path_prefix: str) -> None:
         """Sets the type A/B context based on the security's country of taxation."""

@@ -1,3 +1,16 @@
+# e-tax-reader-generator
+
+Generatore di estratti fiscali elettronici (eCH-0196) da caricare in **e-tax Ticino**, partendo da un file CSV.
+
+Il progetto si basa su [OpenSteuerAuszug](https://github.com/vroonhof/opensteuerauszug) (licenza MIT, vedi `LICENSE`), a cui aggiunge:
+
+- un **importatore CSV generico** (`--importer csv`), che accetta un formato unico per qualsiasi banca o broker: vedi [docs/importer_csv.md](docs/importer_csv.md);
+- la conversione in CHF e i totali delle **spese** (`listOfExpenses`), richiesti dallo schema eCH-0196 2.2.
+
+Per aggiornare il codice di base: `git fetch upstream && git merge upstream/main`.
+
+---
+
 # OpenSteuerAuszug
 
 A Python package for generating Swiss tax statements (Steuerauszüge) from the statements of brokers that don't support it, e.g. mostly foreign ones.

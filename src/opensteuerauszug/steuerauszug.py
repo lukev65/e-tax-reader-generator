@@ -67,6 +67,7 @@ class ImporterType(str, Enum):
     IBKR = "ibkr"
     FIDELITY = "fidelity"
     DEGIRO = "degiro"
+    CSV = "csv"
     NONE = "none"
 
 
@@ -327,6 +328,7 @@ def process(
             ImporterType.SCHWAB,
             ImporterType.IBKR,
             ImporterType.DEGIRO,
+            ImporterType.CSV,
             ImporterType.NONE,
         ]:
             raise typer.BadParameter(
@@ -645,6 +647,28 @@ def process(
                 )
                 statement = degiro_importer.import_dir(str(input_file))
                 print("Degiro import complete.")
+
+            elif importer_type == ImporterType.CSV:
+                if not parsed_period_from or not parsed_period_to:
+                    raise typer.BadParameter(
+                        "--period-from and --period-to (or --tax-year) are required for the CSV importer."
+                    )
+                if not input_file.is_file():
+                    raise typer.BadParameter(
+                        f"Input for CSV importer must be a file, but got: {input_file}"
+                    )
+                from .importers.generic_csv.csv_importer import CsvImporter
+
+                csv_importer = CsvImporter(
+                    period_from=parsed_period_from,
+                    period_to=parsed_period_to,
+                    full_name=general_settings_data.get("full_name"),
+                    canton=general_settings_data.get("canton"),
+                    client_number=general_settings_data.get("client_number"),
+                    institution_name=general_settings_data.get("institution_name", ""),
+                )
+                statement = csv_importer.import_file(str(input_file))
+                print("CSV import complete.")
 
             elif importer_type == ImporterType.NONE and not raw_import:
                 print(

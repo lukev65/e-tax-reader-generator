@@ -361,6 +361,16 @@ class TotalCalculator(BaseCalculator):
                 "listOfLiabilities",
             )
 
+        # 4. Process Expenses (not part of the global totals)
+        if tax_statement.listOfExpenses and tax_statement.listOfExpenses.expense:
+            total_expenses = Decimal('0')
+            for expense in tax_statement.listOfExpenses.expense:
+                if expense.expenses is not None:
+                    total_expenses += expense.expenses
+            self._round_and_set_field(
+                tax_statement.listOfExpenses, 'totalExpenses', total_expenses, "listOfExpenses"
+            )
+
         # Set final global totals (already rounded when accumulated from list subtotals)
         self._round_and_set_field(tax_statement, 'totalTaxValue', self.total_tax_value, "")
         self._round_and_set_field(
