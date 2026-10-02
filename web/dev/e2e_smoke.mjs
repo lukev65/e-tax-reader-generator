@@ -134,7 +134,7 @@ try {
   // The list lives in a not-yet-visible step section, so wait for attachment.
   await page.waitForSelector("#listKursliste li", { state: "attached", timeout: 10000 });
   const cached = await page.locator("#listKursliste li .meta").textContent();
-  if (!cached.includes("cached")) fail("kursliste not restored from IndexedDB");
+  if (!cached.includes("in cache")) fail("kursliste not restored from IndexedDB");
   const cachedName = await page.locator("#listKursliste li .name").textContent();
   if (!cachedName.includes("kursliste_2025.sqlite"))
     fail("cache should hold the converted sqlite, got: " + cachedName);

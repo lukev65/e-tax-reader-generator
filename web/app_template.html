@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenSteuerAuszug — Swiss tax statement generator</title>
+<title>OpenSteuerAuszug — generatore di estratti fiscali svizzeri</title>
 <style>
   :root {
     --bg: #f5f6f8; --panel: #ffffff; --text: #1c2733; --muted: #5c6b7a;
@@ -123,7 +123,7 @@
     font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     max-height: 340px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 12px 0 0;
   }
-  pre.console:empty::before { content: "Output will appear here…"; color: #5c6b7a; }
+  pre.console:empty::before { content: "Qui comparirà l'output…"; color: #5c6b7a; }
 
   /* Engine status bar */
   .enginebar {
@@ -162,10 +162,10 @@
 
 <header class="app">
   <div class="headrow">
-    <h1><span class="flag">🇨🇭</span> OpenSteuerAuszug <span style="font-weight:400;color:var(--muted);font-size:15px">— in your browser</span></h1>
-    <a class="docs-link" href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/webapp.md" target="_blank" rel="noopener">📖 Documentation</a>
+    <h1><span class="flag">🇨🇭</span> OpenSteuerAuszug <span style="font-weight:400;color:var(--muted);font-size:15px">— nel tuo browser</span></h1>
+    <a class="docs-link" href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/webapp.md" target="_blank" rel="noopener">📖 Documentazione</a>
   </div>
-  <p>Generate a Swiss eCH-0196 tax statement (Steuerauszug) from broker data. Everything runs locally in this page — your financial data never leaves your computer.</p>
+  <p>Genera un estratto fiscale elettronico svizzero eCH-0196 a partire dai dati della banca o del broker. Tutto viene eseguito in questa pagina: i tuoi dati finanziari non lasciano mai il computer.</p>
 </header>
 
 <main>
@@ -174,71 +174,71 @@
   <!-- Step 1: Welcome -->
   <section class="step" data-step="0">
     <div class="card">
-      <h2>Welcome</h2>
-      <p class="lead">This wizard walks you through generating your Steuerauszug in five short steps.</p>
-      <p style="font-size:14px;margin:0 0 10px"><b>New here? Start with the documentation:</b>
-        the <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/webapp.md" target="_blank" rel="noopener"><b>web app guide</b></a>
-        explains each step below, and the
-        <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/user_guide.md" target="_blank" rel="noopener"><b>user guide</b></a>
-        covers the tax background, broker exports and how to verify the result.</p>
+      <h2>Benvenuto</h2>
+      <p class="lead">Questa procedura ti guida nella creazione dell'estratto fiscale in cinque brevi passi.</p>
+      <p style="font-size:14px;margin:0 0 10px"><b>Prima volta? Parti dalla documentazione (in inglese):</b>
+        the <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/webapp.md" target="_blank" rel="noopener"><b>guida dell'app web</b></a>
+        spiega i passi qui sotto, e la
+        <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/user_guide.md" target="_blank" rel="noopener"><b>guida utente</b></a>
+        tratta il contesto fiscale, gli export dei broker e come verificare il risultato. Il formato CSV è descritto in <code>docs/importer_csv.md</code>.</p>
       <ul style="font-size:14px;margin:0 0 10px;padding-left:20px">
-        <li><b>Your details</b> — name, canton, tax year and broker (remembered on this device).</li>
-        <li><b>Kursliste</b> — the official ESTV securities list for your tax year.</li>
-        <li><b>Broker files</b> — the statements you exported from your broker.</li>
-        <li><b>Generate</b> — the processing pipeline runs right here in your browser.</li>
-        <li><b>Download</b> — your PDF (and XML) Steuerauszug.</li>
+        <li><b>I tuoi dati</b>: nome, cantone, anno fiscale e banca (ricordati su questo dispositivo).</li>
+        <li><b>Kursliste</b>: il listino ufficiale dei corsi dell'AFC per il tuo anno fiscale.</li>
+        <li><b>File dei dati</b>: il CSV o gli estratti esportati dalla banca o dal broker.</li>
+        <li><b>Genera</b>: l'elaborazione avviene direttamente nel tuo browser.</li>
+        <li><b>Scarica</b>: l'estratto fiscale in PDF (e XML).</li>
       </ul>
       <div class="notice">
-        <b>Disclaimer.</b> This tool is not formally audited. Tax values are computed on a best-effort,
-        informational basis. <b>You</b> are responsible for verifying every figure before submitting your
-        tax return, and for the contents of that return. This browser wizard is additionally mostly
-        AI-coded and has seen much less real-world testing than the Python/CLI version — prefer the CLI
-        if you can install it. See the
-        <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/user_guide.md" target="_blank" rel="noopener">user guide</a>.
+        <b>Avvertenza.</b> Questo strumento non è stato verificato formalmente. I valori fiscali sono calcolati
+        al meglio e a titolo informativo. <b>Tu</b> sei responsabile di controllare ogni cifra prima di inoltrare
+        la dichiarazione d'imposta, e del suo contenuto. Questa procedura nel browser è inoltre scritta in gran
+        parte con l'IA ed è stata provata molto meno della versione Python da riga di comando: se puoi
+        installarla, preferisci quella. Vedi la
+        <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/user_guide.md" target="_blank" rel="noopener">guida utente</a>.
       </div>
       <label class="checkbox">
         <input type="checkbox" id="ack">
-        <span>I understand that I must verify the generated statement myself and that I remain responsible for my tax return.</span>
+        <span>Ho capito che devo verificare personalmente l'estratto generato e che resto responsabile della mia dichiarazione d'imposta.</span>
       </label>
       <div class="notice" id="devModeNotice" style="display:none">
-        This is the un-built template. Run <code>python scripts/build_web_app.py</code> to produce the
-        distributable <code>opensteuerauszug.html</code> with the application code embedded.
+        Questo è il modello non compilato. Esegui <code>python scripts/build_web_app.py</code> per ottenere
+        il file distribuibile <code>opensteuerauszug.html</code> con il codice dell'applicazione incorporato.
       </div>
       <details class="adv">
-        <summary>Advanced: runtime options</summary>
-        <p style="font-size:13px;margin:10px 0 6px">The Python runtime (Pyodide) and library dependencies are
-        downloaded once from public CDNs (~40&nbsp;MB, cached by your browser afterwards). Your personal data is
-        never uploaded anywhere. To use a self-hosted copy instead, set the base URL below and reload.</p>
-        <label class="field"><b>Pyodide base URL</b>
-          <input type="text" id="pyodideBase" placeholder="(default: jsDelivr CDN)">
+        <summary>Avanzate: opzioni di esecuzione</summary>
+        <p style="font-size:13px;margin:10px 0 6px">L'ambiente Python (Pyodide) e le librerie vengono
+        scaricati una volta da CDN pubblici (~40&nbsp;MB, poi conservati nella cache del browser). I tuoi dati personali
+        non vengono mai caricati da nessuna parte. Per usare una copia ospitata altrove, indica qui sotto l'URL di base e ricarica la pagina.</p>
+        <label class="field"><b>URL di base di Pyodide</b>
+          <input type="text" id="pyodideBase" placeholder="(predefinito: CDN jsDelivr)">
         </label>
       </details>
     </div>
     <div class="navbtns">
       <span></span>
-      <button class="primary" id="btnStart" disabled>Get started →</button>
+      <button class="primary" id="btnStart" disabled>Inizia →</button>
     </div>
   </section>
 
   <!-- Step 2: Settings -->
   <section class="step" data-step="1">
     <div class="card">
-      <h2>Your details</h2>
-      <p class="lead">These are stored only in this browser (local storage) and reused next time.</p>
+      <h2>I tuoi dati</h2>
+      <p class="lead">Sono salvati solo in questo browser (local storage) e riutilizzati la prossima volta.</p>
       <div class="grid">
-        <label class="field"><b>Full name</b>
-          <input type="text" id="fullName" placeholder="Maxine Muster" autocomplete="name">
+        <label class="field"><b>Nome e cognome</b>
+          <input type="text" id="fullName" placeholder="Mario Rossi" autocomplete="name">
         </label>
-        <label class="field"><b>Bank / institution</b>
-          <input type="text" id="institutionName" placeholder="e.g. Banca dello Stato (CSV importer only)">
+        <label class="field"><b>Banca / istituto</b>
+          <input type="text" id="institutionName" placeholder="es. Banca dello Stato (solo per il CSV)">
         </label>
-        <label class="field"><b>Canton</b>
+        <label class="field"><b>Cantone</b>
           <select id="canton"></select>
         </label>
-        <label class="field"><b>Tax year</b>
+        <label class="field"><b>Anno fiscale</b>
           <input type="number" id="taxYear" min="2000" max="2100" step="1">
         </label>
-        <label class="field"><b>Document language</b>
+        <label class="field"><b>Lingua del documento</b>
           <select id="language">
             <option value="de">Deutsch</option>
             <option value="en">English</option>
@@ -246,128 +246,128 @@
             <option value="it">Italiano</option>
           </select>
         </label>
-        <label class="field"><b>Broker / importer</b>
+        <label class="field"><b>Fonte dei dati</b>
           <select id="importer">
-            <option value="csv">Generic CSV (any bank or broker)</option>
+            <option value="csv">CSV generico (qualsiasi banca o broker)</option>
             <option value="ibkr">Interactive Brokers (Flex Query XML)</option>
-            <option value="schwab">Charles Schwab (statement exports)</option>
-            <option value="fidelity">Fidelity (experimental)</option>
+            <option value="schwab">Charles Schwab (export degli estratti)</option>
+            <option value="fidelity">Fidelity (sperimentale)</option>
             <option value="degiro">DEGIRO</option>
           </select>
         </label>
-        <label class="field"><b>Tax value calculation</b>
+        <label class="field"><b>Calcolo dei valori fiscali</b>
           <select id="taxLevel">
-            <option value="kursliste">Kursliste (recommended)</option>
-            <option value="minimal">Minimal (let tax software compute)</option>
+            <option value="kursliste">Kursliste (consigliato)</option>
+            <option value="minimal">Minimo (calcola il software fiscale)</option>
           </select>
         </label>
       </div>
       <div id="acctBox" style="margin-top:16px">
-        <b style="font-size:13.5px">Accounts</b>
+        <b style="font-size:13.5px">Conti</b>
         <p class="hint" id="acctHint"></p>
         <div id="acctRows"></div>
-        <button class="small" id="btnAddAcct" type="button">+ Add account</button>
+        <button class="small" id="btnAddAcct" type="button">+ Aggiungi conto</button>
       </div>
       <div class="notice" id="experimentalNotice" style="display:none">
-        This importer is <b>experimental</b>. It will be enabled via
-        <code>experimental_importers = true</code> in the generated configuration — double-check results carefully.
+        Questo importatore è <b>sperimentale</b>. Viene abilitato con
+        <code>experimental_importers = true</code> nella configurazione generata: controlla i risultati con particolare attenzione.
       </div>
       <details class="adv" id="tomlBox">
-        <summary>Advanced: configuration file (config.toml)</summary>
-        <p style="font-size:13px;margin:10px 0 6px">The settings above are translated into the configuration below.
-          Tick the box to edit it directly (for broker/account overrides described in the
-          <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/config.md" target="_blank" rel="noopener">configuration guide</a>).</p>
-        <label class="checkbox"><input type="checkbox" id="tomlCustom"><span>Edit the TOML manually (overrides the form above)</span></label>
+        <summary>Avanzate: file di configurazione (config.toml)</summary>
+        <p style="font-size:13px;margin:10px 0 6px">Le impostazioni qui sopra diventano la configurazione qui sotto.
+          Spunta la casella per modificarla direttamente (per le impostazioni per broker o conto descritte nella
+          <a href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/config.md" target="_blank" rel="noopener">guida alla configurazione</a>).</p>
+        <label class="checkbox"><input type="checkbox" id="tomlCustom"><span>Modifica il TOML a mano (sostituisce il modulo qui sopra)</span></label>
         <textarea class="toml" id="tomlText" readonly spellcheck="false"></textarea>
       </details>
     </div>
     <div class="navbtns">
-      <button class="ghost" data-nav="back">← Back</button>
-      <button class="primary" data-nav="next">Next: Kursliste →</button>
+      <button class="ghost" data-nav="back">← Indietro</button>
+      <button class="primary" data-nav="next">Avanti: Kursliste →</button>
     </div>
   </section>
 
   <!-- Step 3: Kursliste -->
   <section class="step" data-step="2">
     <div class="card">
-      <h2>Kursliste (official securities list)</h2>
-      <p class="lead">The pipeline needs the official ESTV Kursliste for your tax year to look up
-        valor numbers, exchange rates and tax values. It is cached in your browser, so you normally
-        only do this once per year.</p>
+      <h2>Kursliste (listino ufficiale dei corsi)</h2>
+      <p class="lead">Serve la Kursliste ufficiale dell'AFC per il tuo anno fiscale, da cui si ricavano
+        numeri di valore, tassi di cambio e valori fiscali. Viene conservata nel browser, quindi di solito
+        questo passo si fa una volta all'anno.</p>
       <ol style="font-size:14px;padding-left:20px;margin:0 0 12px">
-        <li>Download the ZIP marked <b>“Initial”</b> (latest version) for your tax year from
-          <a href="https://www.ictax.admin.ch/extern/en.html#/xml" target="_blank" rel="noopener">ictax.admin.ch</a> and unzip it.</li>
-        <li>Add the resulting <code>kursliste_YYYY.xml</code> below.</li>
+        <li>Scarica da
+          <a href="https://www.ictax.admin.ch/extern/it.html#/xml" target="_blank" rel="noopener">ictax.admin.ch</a> lo ZIP <b>“Initial”</b> (versione più recente) del tuo anno fiscale e decomprimilo.</li>
+        <li>Aggiungi qui sotto il file <code>kursliste_AAAA.xml</code> ottenuto.</li>
       </ol>
-      <p class="hint">The XML is large (&gt;100&nbsp;MB), so the first run converts it to a compact database —
-        that takes a few minutes, after which the database is cached and the XML is no longer needed.
-        If you also use the command line tool, <code>opensteuerauszug kursliste download --year YYYY</code>
-        produces the same <code>kursliste_YYYY.sqlite</code>, which you can add here directly.</p>
+      <p class="hint">L'XML è grande (&gt;100&nbsp;MB), quindi alla prima elaborazione viene convertito in un database compatto.
+        Ci vuole qualche minuto, poi il database resta nella cache e l'XML non serve più.
+        Se usi anche lo strumento da riga di comando, <code>opensteuerauszug kursliste download --year AAAA</code>
+        produce lo stesso <code>kursliste_AAAA.sqlite</code>, che puoi aggiungere qui direttamente.</p>
       <div class="filedrop" id="dropKursliste">
-        <b>Drop the Kursliste file here</b> or click to choose<br>
-        <span class="hint">kursliste_YYYY.xml or kursliste_YYYY.sqlite</span>
+        <b>Trascina qui il file della Kursliste</b> o fai clic per sceglierlo<br>
+        <span class="hint">kursliste_AAAA.xml o kursliste_AAAA.sqlite</span>
         <input type="file" id="fileKursliste" accept=".xml,.sqlite" multiple hidden>
       </div>
       <ul class="filelist" id="listKursliste"></ul>
       <div class="notice" id="kurslisteYearWarn" style="display:none"></div>
       <div class="notice error" id="idbWarn" style="display:none">
-        Your browser did not allow persistent storage for this page, so the Kursliste will need to be
-        re-added next time you open it. Everything else still works.
+        Il browser non consente a questa pagina di salvare dati in modo permanente, quindi la prossima volta
+        dovrai aggiungere di nuovo la Kursliste. Tutto il resto funziona.
       </div>
     </div>
     <div class="navbtns">
-      <button class="ghost" data-nav="back">← Back</button>
-      <button class="primary" data-nav="next">Next: Broker files →</button>
+      <button class="ghost" data-nav="back">← Indietro</button>
+      <button class="primary" data-nav="next">Avanti: file dei dati →</button>
     </div>
   </section>
 
   <!-- Step 4: Broker files -->
   <section class="step" data-step="3">
     <div class="card">
-      <h2>Broker files</h2>
+      <h2>File dei dati</h2>
       <p class="lead" id="brokerLead"></p>
       <div class="notice" id="brokerHelp"></div>
       <div class="filedrop" id="dropBroker">
-        <b>Drop your broker file(s) here</b> or click to choose
+        <b>Trascina qui i tuoi file</b> o fai clic per sceglierli
         <input type="file" id="fileBroker" multiple hidden>
       </div>
       <ul class="filelist" id="listBroker"></ul>
       <details class="adv">
-        <summary>Optional: attach supporting PDFs</summary>
-        <p style="font-size:13px;margin:10px 0 6px">These pages are prepended/appended to the final PDF unchanged
-          (e.g. an original broker statement or a 1042-S form).</p>
+        <summary>Facoltativo: allega PDF di supporto</summary>
+        <p style="font-size:13px;margin:10px 0 6px">Queste pagine vengono aggiunte senza modifiche prima o dopo il PDF finale
+          (es. l'estratto originale della banca o un modulo 1042-S).</p>
         <div class="grid">
-          <label class="field"><b>Prepend (before statement)</b>
+          <label class="field"><b>Prima dell'estratto</b>
             <input type="file" id="filePre" accept=".pdf" multiple>
           </label>
-          <label class="field"><b>Append (after statement)</b>
+          <label class="field"><b>Dopo l'estratto</b>
             <input type="file" id="filePost" accept=".pdf" multiple>
           </label>
         </div>
       </details>
     </div>
     <div class="navbtns">
-      <button class="ghost" data-nav="back">← Back</button>
-      <button class="primary" data-nav="next">Next: Generate →</button>
+      <button class="ghost" data-nav="back">← Indietro</button>
+      <button class="primary" data-nav="next">Avanti: genera →</button>
     </div>
   </section>
 
   <!-- Step 5: Generate -->
   <section class="step" data-step="4">
     <div class="card">
-      <h2>Generate</h2>
-      <p class="lead">Review the summary, then run the pipeline. Processing happens entirely in this page and can
-        take from a few seconds up to several minutes (converting a Kursliste XML on the first run is the slow part).</p>
+      <h2>Genera</h2>
+      <p class="lead">Controlla il riepilogo, poi avvia l'elaborazione. Avviene interamente in questa pagina e può
+        durare da pochi secondi a diversi minuti (la parte lenta è la conversione della Kursliste XML alla prima esecuzione).</p>
       <div id="runSummary" style="font-size:14px"></div>
       <div class="notice error" id="runBlockers" style="display:none"></div>
       <div class="row" style="margin-top:14px">
-        <button class="primary" id="btnRun" disabled>▶ Generate Steuerauszug</button>
-        <span class="pill loading" id="runStatus" style="display:none"><span class="spinner"></span> Running…</span>
+        <button class="primary" id="btnRun" disabled>▶ Genera l'estratto fiscale</button>
+        <span class="pill loading" id="runStatus" style="display:none"><span class="spinner"></span> In corso…</span>
       </div>
       <pre class="console" id="runLog"></pre>
     </div>
     <div class="navbtns">
-      <button class="ghost" data-nav="back">← Back</button>
+      <button class="ghost" data-nav="back">← Indietro</button>
       <span></span>
     </div>
   </section>
@@ -375,28 +375,28 @@
   <!-- Step 6: Results -->
   <section class="step" data-step="5">
     <div class="card">
-      <h2>Your Steuerauszug is ready</h2>
+      <h2>Il tuo estratto fiscale è pronto</h2>
       <p class="lead" id="resultLead"></p>
       <div class="dl" id="downloads"></div>
       <div class="notice" id="resultWarnings" style="display:none"></div>
       <div class="notice ok">
-        <b>Before you file — verify the document:</b>
+        <b>Prima di inoltrarlo, verifica il documento:</b>
         <ul style="margin:6px 0 0;padding-left:18px">
-          <li>No unresolved errors or warnings in the processing log.</li>
-          <li>All securities are present and mapped to the correct valor number.</li>
-          <li>All transactions and end-of-year positions are correct.</li>
-          <li>Cash balances and interest totals are correct.</li>
-          <li>After importing into your tax software, <b>recalculate</b> the tax values there.</li>
+          <li>Nel registro dell'elaborazione non restano errori o avvisi irrisolti.</li>
+          <li>Tutti i titoli sono presenti e associati al numero di valore corretto.</li>
+          <li>Tutte le operazioni e le posizioni di fine anno sono corrette.</li>
+          <li>I saldi dei conti e i totali degli interessi sono corretti.</li>
+          <li>Dopo l'importazione nel software fiscale (es. e-tax), <b>ricalcola</b> lì i valori fiscali.</li>
         </ul>
       </div>
       <details class="adv">
-        <summary>Processing log</summary>
+        <summary>Registro dell'elaborazione</summary>
         <pre class="console" id="resultLog"></pre>
       </details>
     </div>
     <div class="navbtns">
-      <button class="ghost" data-nav="back">← Back to generate</button>
-      <button id="btnRestart">Start a new run</button>
+      <button class="ghost" data-nav="back">← Torna a Genera</button>
+      <button id="btnRestart">Nuova elaborazione</button>
     </div>
   </section>
 </main>
@@ -404,19 +404,19 @@
 <div class="enginebar">
   <div class="inner">
     <div class="statusrow">
-      <span class="pill loading" id="enginePill"><span class="spinner"></span> <span id="engineState">Waiting</span></span>
+      <span class="pill loading" id="enginePill"><span class="spinner"></span> <span id="engineState">In attesa</span></span>
       <progress id="engineProgress" max="100" value="0"></progress>
-      <span class="detail" id="engineDetail">Python engine not started yet.</span>
-      <button class="small ghost" id="engineDetailToggle" style="display:none">Show details</button>
+      <span class="detail" id="engineDetail">Motore Python non ancora avviato.</span>
+      <button class="small ghost" id="engineDetailToggle" style="display:none">Mostra dettagli</button>
     </div>
     <pre class="console" id="engineErrorBox" style="display:none"></pre>
   </div>
 </div>
 
 <footer class="page">
-  OpenSteuerAuszug <span id="verInfo"></span> — MIT licensed open source software, no warranty.
-  <a href="https://github.com/vroonhof/opensteuerauszug" target="_blank" rel="noopener">Source &amp; documentation</a>.
-  All application code is embedded in this file; the only network requests download the version-pinned Python runtime and its libraries.
+  OpenSteuerAuszug <span id="verInfo"></span>: software open source con licenza MIT, senza garanzia.
+  <a href="https://github.com/vroonhof/opensteuerauszug" target="_blank" rel="noopener">Sorgente e documentazione</a>.
+  Tutto il codice dell'applicazione è incorporato in questo file; le uniche richieste di rete scaricano l'ambiente Python, in una versione fissa, e le sue librerie.
 </footer>
 
 <!-- The application bundle (wheels etc.) is injected here by scripts/build_web_app.py -->
@@ -439,10 +439,10 @@ function b64ToBytes(b64) {
 
 async function init(cfg) {
   try {
-    progress("runtime", "Downloading Python runtime…", 5);
+    progress("runtime", "Download dell'ambiente Python…", 5);
     importScripts(cfg.indexURL + "pyodide.js");
     pyodide = await loadPyodide({ indexURL: cfg.indexURL });
-    progress("runtime", "Python runtime ready. Fetching libraries…", 25);
+    progress("runtime", "Ambiente Python pronto. Download delle librerie…", 25);
 
     await pyodide.loadPackage("micropip", { messageCallback: () => {} });
     // sqlite3 is a separate loadable package in Pyodide; the fast Kursliste
@@ -455,7 +455,7 @@ async function init(cfg) {
     // embedded in this file as wheels — the page never contacts PyPI.
     const distPkgs = cfg.bundle.pyodidePackages || [];
     let loaded = 0;
-    progress("deps", "Loading libraries…", 28);
+    progress("deps", "Caricamento delle librerie…", 28);
     await pyodide.loadPackage(distPkgs, { messageCallback: (m) => {
       if (/^Loaded/.test(m)) {
         loaded++;
@@ -464,7 +464,7 @@ async function init(cfg) {
     }});
 
     // … then the application wheels that are embedded in this HTML file.
-    progress("app", "Installing OpenSteuerAuszug…", 82);
+    progress("app", "Installazione di OpenSteuerAuszug…", 82);
     pyodide.FS.mkdirTree("/wheels");
     const wheelPaths = [];
     for (const wheel of cfg.bundle.wheels) {
@@ -474,7 +474,7 @@ async function init(cfg) {
     }
     await micropip.install.callKwargs(wheelPaths, { deps: false });
 
-    progress("app", "Preparing workspace…", 94);
+    progress("app", "Preparazione dello spazio di lavoro…", 94);
     pyodide.runPython(`
 import json
 from opensteuerauszug.util import web_runner
@@ -509,7 +509,7 @@ function resetDir(path) {
 }
 
 async function run(job) {
-  if (!pyodide) { post({ type: "done", result: { success: false, log: "Engine not ready." } }); return; }
+  if (!pyodide) { post({ type: "done", result: { success: false, log: "Motore non pronto." } }); return; }
   const FS = pyodide.FS;
   try {
     for (const dir of ["/work/input", "/work/kursliste", "/work/output", "/work/ambles"])
@@ -527,7 +527,7 @@ async function run(job) {
     // XML to SQLite with the streaming converter first and hand the result
     // back to the page, which caches it for future runs.
     if (job.kurslisteFiles.some((f) => /\.xml$/i.test(f.name))) {
-      post({ type: "log", line: "Converting Kursliste XML to a database (one-time; the result is cached in your browser)…" });
+      post({ type: "log", line: "Conversione della Kursliste XML in database (una sola volta; il risultato resta nella cache del browser)…" });
       const convJson = await pyodide.runPythonAsync(`
 import json
 from opensteuerauszug.util import web_runner
@@ -588,7 +588,7 @@ json.dumps(_r)
     }
     post({ type: "done", result: payload }, transfers);
   } catch (err) {
-    post({ type: "log", line: "Internal error: " + String(err && (err.stack || err.message) || err) });
+    post({ type: "log", line: "Errore interno: " + String(err && (err.stack || err.message) || err) });
     post({ type: "done", result: { success: false, exitCode: -1, files: [] } });
   }
 }
@@ -680,7 +680,7 @@ function generateToml() {
 function effectiveToml() { return settings.tomlCustom && settings.tomlText ? settings.tomlText : generateToml(); }
 
 /* ============================= stepper ================================= */
-const STEPS = ["Welcome", "Your details", "Kursliste", "Broker files", "Generate", "Download"];
+const STEPS = ["Benvenuto", "I tuoi dati", "Kursliste", "File dei dati", "Genera", "Scarica"];
 function renderStepper() {
   const ol = $("stepper");
   ol.innerHTML = "";
@@ -747,10 +747,10 @@ function renderAccounts() {
     const row = document.createElement("div");
     row.className = "acctrow";
     const alias = document.createElement("input");
-    alias.placeholder = "alias (e.g. main)"; alias.value = acct.alias || "";
+    alias.placeholder = "alias (es. principale)"; alias.value = acct.alias || "";
     alias.onchange = () => { acct.alias = alias.value; saveSettings(); refreshToml(); };
     const num = document.createElement("input");
-    num.placeholder = "account number"; num.value = acct.number || "";
+    num.placeholder = "numero del conto"; num.value = acct.number || "";
     num.onchange = () => { acct.number = num.value; saveSettings(); refreshToml(); };
     const del = document.createElement("button");
     del.type = "button"; del.className = "small"; del.textContent = "✕";
@@ -780,8 +780,8 @@ function refreshSettingsUi() {
   $("experimentalNotice").style.display = EXPERIMENTAL[settings.importer] ? "" : "none";
   const required = ACCOUNTS_REQUIRED[settings.importer];
   $("acctHint").textContent = required
-    ? "This importer needs at least one account number so statements can be matched (see the broker guide)."
-    : "Optional for this importer — add account-specific overrides only if you need them.";
+    ? "Questo importatore richiede almeno un numero di conto per abbinare gli estratti (vedi la guida del broker)."
+    : "Facoltativo per questo importatore: aggiungi impostazioni per conto solo se ti servono.";
   refreshToml();
 }
 renderAccounts();
@@ -832,9 +832,9 @@ function renderKursliste() {
   state.kurslisteFiles.forEach((f) => {
     const li = document.createElement("li");
     li.innerHTML = '<span class="name">📊 ' + f.name + '</span><span class="meta">' +
-      fmtSize(f.size) + (f.fromCache ? " · cached" : "") + "</span>";
+      fmtSize(f.size) + (f.fromCache ? " · in cache" : "") + "</span>";
     const del = document.createElement("button");
-    del.className = "small"; del.textContent = "Remove";
+    del.className = "small"; del.textContent = "Rimuovi";
     del.onclick = async () => {
       state.kurslisteFiles = state.kurslisteFiles.filter((x) => x.name !== f.name);
       await idbDelete(f.name);
@@ -846,8 +846,8 @@ function renderKursliste() {
   const warn = $("kurslisteYearWarn");
   const year = String(settings.taxYear);
   if (state.kurslisteFiles.length && !state.kurslisteFiles.some((f) => f.name.includes(year))) {
-    warn.textContent = "None of the added files mentions " + year + " in its name. Files must be named " +
-      "kursliste_" + year + ".xml (or .sqlite) to be picked up for tax year " + year + ".";
+    warn.textContent = "Nessuno dei file aggiunti contiene " + year + " nel nome. Per l'anno fiscale " + year +
+      " il file deve chiamarsi kursliste_" + year + ".xml (o .sqlite).";
     warn.style.display = "";
   } else warn.style.display = "none";
 }
@@ -890,41 +890,41 @@ const CSV_TEMPLATE_HREF = "data:text/csv;charset=utf-8," + encodeURIComponent(CS
 
 const BROKER_INFO = {
   csv: {
-    lead: "Generic CSV: one file with one row per balance, trade, interest, dividend or expense.",
-    help: 'Fill in the CSV format described in <code>docs/importer_csv.md</code> ' +
-      "with dates inside the tax year chosen in step 2 (rows from other years are rejected, " +
-      "and the tax software only accepts statements for its own tax year). " +
-      '(<a download="modello_estratto.csv" href="' + CSV_TEMPLATE_HREF + '">download a template</a>). ' +
-      "Amounts are gross, in the original currency; exchange rates and tax values come from the Kursliste. " +
-      "If the file has errors, the log lists every wrong row with its line number.",
+    lead: "CSV generico: un solo file, con una riga per ogni saldo, operazione, interesse, dividendo o spesa.",
+    help: 'Compila il CSV nel formato descritto in <code>docs/importer_csv.md</code> ' +
+      '(<a download="modello_estratto.csv" href="' + CSV_TEMPLATE_HREF + '">scarica un modello</a>). ' +
+      "Tutte le date devono cadere nell'anno fiscale scelto al passo 2: le righe di altri anni vengono rifiutate, " +
+      "perché e-tax accetta solo estratti del proprio periodo fiscale. " +
+      "Gli importi sono lordi e nella valuta originale; tassi di cambio e valori fiscali vengono dalla Kursliste. " +
+      "Se il file contiene errori, il registro elenca ogni riga sbagliata con il suo numero.",
     accept: ".csv,.txt", multiple: false,
   },
   ibkr: {
-    lead: "Interactive Brokers: one Flex Query XML file covering the whole tax year.",
-    help: 'Create a Flex Query with the sections described in the <a target="_blank" rel="noopener" ' +
-      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_ibkr.md">IBKR guide</a> ' +
-      "and download it as XML. Add that single file below.",
+    lead: "Interactive Brokers: un file XML Flex Query che copre tutto l'anno fiscale.",
+    help: 'Crea una Flex Query con le sezioni descritte nella <a target="_blank" rel="noopener" ' +
+      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_ibkr.md">guida IBKR</a> ' +
+      "(in inglese) e scaricala in XML. Aggiungi qui sotto quel file.",
     accept: ".xml", multiple: false,
   },
   schwab: {
-    lead: "Charles Schwab: all exported statement files for the tax year.",
-    help: 'Export the files described in the <a target="_blank" rel="noopener" ' +
-      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_schwab.md">Schwab guide</a> ' +
-      "(transaction history JSON/CSV, positions, equity awards) and add them all below.",
+    lead: "Charles Schwab: tutti i file esportati per l'anno fiscale.",
+    help: 'Esporta i file descritti nella <a target="_blank" rel="noopener" ' +
+      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_schwab.md">guida Schwab</a> ' +
+      "(in inglese: storico operazioni JSON/CSV, posizioni, equity awards) e aggiungili tutti qui sotto.",
     accept: "", multiple: true,
   },
   fidelity: {
-    lead: "Fidelity (experimental): all exported statement files for the tax year.",
-    help: 'See the <a target="_blank" rel="noopener" ' +
-      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_fidelity.md">Fidelity guide</a> ' +
-      "for the required exports, then add them all below.",
+    lead: "Fidelity (sperimentale): tutti i file esportati per l'anno fiscale.",
+    help: 'Gli export necessari sono descritti nella <a target="_blank" rel="noopener" ' +
+      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_fidelity.md">guida Fidelity</a> ' +
+      "(in inglese); aggiungili tutti qui sotto.",
     accept: "", multiple: true,
   },
   degiro: {
-    lead: "DEGIRO: the Account.csv and Portfolio.csv exports for the tax year.",
-    help: 'See the <a target="_blank" rel="noopener" ' +
-      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_degiro.md">DEGIRO guide</a> ' +
-      "for the required exports, then add them all below.",
+    lead: "DEGIRO: gli export Account.csv e Portfolio.csv dell'anno fiscale.",
+    help: 'Gli export necessari sono descritti nella <a target="_blank" rel="noopener" ' +
+      'href="https://github.com/vroonhof/opensteuerauszug/blob/main/docs/importer_degiro.md">guida DEGIRO</a> ' +
+      "(in inglese); aggiungili tutti qui sotto.",
     accept: ".csv", multiple: true,
   },
 };
@@ -943,7 +943,7 @@ function renderBrokerFiles() {
     const li = document.createElement("li");
     li.innerHTML = '<span class="name">📄 ' + f.name + '</span><span class="meta">' + fmtSize(f.size) + "</span>";
     const del = document.createElement("button");
-    del.className = "small"; del.textContent = "Remove";
+    del.className = "small"; del.textContent = "Rimuovi";
     del.onclick = () => { state.brokerFiles.splice(i, 1); renderBrokerFiles(); };
     li.appendChild(del);
     ul.appendChild(li);
@@ -974,7 +974,7 @@ function setEngine(cls, label, detail, pct, errorDetail) {
   } else {
     box.style.display = "none";
     toggle.style.display = "none";
-    toggle.textContent = "Show details";
+    toggle.textContent = "Mostra dettagli";
   }
   refreshRunButton();
 }
@@ -982,7 +982,7 @@ $("engineDetailToggle").onclick = () => {
   const box = $("engineErrorBox");
   const show = box.style.display === "none";
   box.style.display = show ? "" : "none";
-  $("engineDetailToggle").textContent = show ? "Hide details" : "Show details";
+  $("engineDetailToggle").textContent = show ? "Nascondi dettagli" : "Mostra dettagli";
 };
 function startEngine() {
   if (worker || !BUNDLE) return;
@@ -990,13 +990,13 @@ function startEngine() {
   worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
   worker.onmessage = (e) => {
     const msg = e.data;
-    if (msg.type === "progress") setEngine("loading", "Loading engine", msg.detail, msg.pct);
+    if (msg.type === "progress") setEngine("loading", "Avvio del motore", msg.detail, msg.pct);
     else if (msg.type === "ready") {
-      setEngine("ready", "Engine ready", "OpenSteuerAuszug " + msg.version + " · Pyodide " + PYODIDE_VERSION);
+      setEngine("ready", "Motore pronto", "OpenSteuerAuszug " + msg.version + " · Pyodide " + PYODIDE_VERSION);
       $("verInfo").textContent = "v" + msg.version;
     }
     else if (msg.type === "init-error")
-      setEngine("error", "Engine failed", msg.message + " — check your internet connection and reload.",
+      setEngine("error", "Errore del motore", msg.message + ": controlla la connessione a internet e ricarica la pagina.",
                 null, msg.detail || msg.message);
     else if (msg.type === "log") {
       state.lastLog.push(msg.line);
@@ -1007,42 +1007,42 @@ function startEngine() {
     else if (msg.type === "kursliste-converted") onKurslisteConverted(msg);
     else if (msg.type === "done") onRunDone(msg.result);
   };
-  worker.onerror = (e) => setEngine("error", "Engine failed", e.message || "Worker error", null,
-    [e.message || "Worker error", e.filename ? "at " + e.filename + ":" + e.lineno : ""].filter(Boolean).join("\n"));
+  worker.onerror = (e) => setEngine("error", "Errore del motore", e.message || "Errore del worker", null,
+    [e.message || "Errore del worker", e.filename ? "in " + e.filename + ":" + e.lineno : ""].filter(Boolean).join("\n"));
   const params = new URLSearchParams(location.search);
   const base = params.get("pyodide") || settings.pyodideBase || DEFAULT_PYODIDE_BASE;
   const indexURL = base.endsWith("/") ? base : base + "/";
-  setEngine("loading", "Loading engine", "Starting…", 2);
+  setEngine("loading", "Avvio del motore", "Avvio…", 2);
   worker.postMessage({ type: "init", indexURL, bundle: BUNDLE });
 }
 
 /* ========================= step 5: generate ============================ */
 function runBlockers() {
   const problems = [];
-  if (!BUNDLE) problems.push("This template has not been built — run scripts/build_web_app.py.");
-  if (state.engine === "error") problems.push("The Python engine failed to load.");
-  if (state.engine !== "ready") problems.push("The Python engine is still loading (see the bar below).");
-  if (!state.kurslisteFiles.length) problems.push("No Kursliste file added (step 3).");
-  if (!state.brokerFiles.length) problems.push("No broker files added (step 4).");
+  if (!BUNDLE) problems.push("Questo modello non è compilato: esegui scripts/build_web_app.py.");
+  if (state.engine === "error") problems.push("Il motore Python non si è caricato.");
+  if (state.engine !== "ready") problems.push("Il motore Python si sta ancora caricando (vedi la barra in basso).");
+  if (!state.kurslisteFiles.length) problems.push("Nessun file Kursliste aggiunto (passo 3).");
+  if (!state.brokerFiles.length) problems.push("Nessun file dei dati aggiunto (passo 4).");
   if (settings.importer === "csv" && state.brokerFiles.length > 1)
-    problems.push("The CSV importer expects a single CSV file.");
+    problems.push("L'importatore CSV richiede un solo file CSV.");
   if (settings.importer === "ibkr" && state.brokerFiles.length > 1)
-    problems.push("The IBKR importer expects a single Flex Query XML file.");
+    problems.push("L'importatore IBKR richiede un solo file XML Flex Query.");
   if (ACCOUNTS_REQUIRED[settings.importer] && !settings.tomlCustom &&
       !settings.accounts.some((a) => a.number))
-    problems.push("This importer requires at least one account number (step 2).");
-  if (!settings.taxYear || settings.taxYear < 2000) problems.push("Tax year looks invalid (step 2).");
+    problems.push("Questo importatore richiede almeno un numero di conto (passo 2).");
+  if (!settings.taxYear || settings.taxYear < 2000) problems.push("L'anno fiscale non sembra valido (passo 2).");
   return problems;
 }
 function renderRunSummary() {
   const rows = [
-    ["Tax year", settings.taxYear],
-    ["Broker", $("importer").selectedOptions[0].textContent],
-    ["Name", settings.fullName || "(not set)"],
-    ["Canton", settings.canton],
-    ["Calculation", settings.taxLevel === "kursliste" ? "Kursliste values" : "Minimal"],
+    ["Anno fiscale", settings.taxYear],
+    ["Fonte", $("importer").selectedOptions[0].textContent],
+    ["Nome", settings.fullName || "(non indicato)"],
+    ["Cantone", settings.canton],
+    ["Calcolo", settings.taxLevel === "kursliste" ? "Valori della Kursliste" : "Minimo"],
     ["Kursliste", state.kurslisteFiles.map((f) => f.name).join(", ") || "—"],
-    ["Broker files", state.brokerFiles.length + " file(s)"],
+    ["File dei dati", state.brokerFiles.length + " file"],
   ];
   $("runSummary").innerHTML = rows.map(([k, v]) =>
     "<div><b style='display:inline-block;min-width:110px'>" + k + ":</b> " + String(v) + "</div>").join("");
@@ -1053,7 +1053,7 @@ function refreshRunButton() {
   const problems = runBlockers();
   const box = $("runBlockers");
   if (problems.length && !(problems.length === 1 && state.engine === "loading")) {
-    box.innerHTML = "<b>Before you can run:</b><ul style='margin:6px 0 0;padding-left:18px'>" +
+    box.innerHTML = "<b>Prima di poter avviare:</b><ul style='margin:6px 0 0;padding-left:18px'>" +
       problems.map((p) => "<li>" + p + "</li>").join("") + "</ul>";
     box.style.display = "";
   } else box.style.display = "none";
@@ -1087,7 +1087,7 @@ $("btnRun").onclick = async () => {
       for (const f of list) transfers.push(f.buffer);
     worker.postMessage({ type: "run", job }, transfers);
   } catch (err) {
-    $("runLog").textContent += "Failed to prepare files: " + err + "\n";
+    $("runLog").textContent += "Impossibile preparare i file: " + err + "\n";
     state.running = false;
     $("runStatus").style.display = "none";
     refreshRunButton();
@@ -1115,9 +1115,9 @@ function onRunDone(result) {
     go(5);
   } else {
     const log = $("runLog");
-    log.textContent += "\n✕ Processing failed (exit code " + result.exitCode + "). " +
-      "Check the messages above — common causes are a missing Kursliste year, a wrong importer, " +
-      "or missing account configuration.\n";
+    log.textContent += "\n✕ Elaborazione non riuscita (codice di uscita " + result.exitCode + "). " +
+      "Controlla i messaggi qui sopra: le cause più comuni sono una Kursliste dell'anno sbagliato, " +
+      "un importatore sbagliato o errori nel file dei dati.\n";
     log.scrollTop = log.scrollHeight;
   }
 }
@@ -1127,7 +1127,7 @@ function renderResults() {
   const box = $("downloads");
   box.innerHTML = "";
   const year = settings.taxYear;
-  const labels = { pdf: "⬇ Steuerauszug PDF", xml: "⬇ eCH-0196 XML" };
+  const labels = { pdf: "⬇ Estratto fiscale PDF", xml: "⬇ XML eCH-0196" };
   const names = { pdf: "steuerauszug_" + year + ".pdf", xml: "steuerauszug_" + year + ".xml" };
   const types = { pdf: "application/pdf", xml: "application/xml" };
   for (const f of state.results.files) {
@@ -1138,13 +1138,13 @@ function renderResults() {
     a.download = names[f.kind] || f.name;
     box.appendChild(a);
   }
-  $("resultLead").textContent = "Tax year " + year + " — import the PDF into your tax software " +
-    "(the machine-readable data is embedded in its barcodes). The XML is the same data for archival or validation.";
+  $("resultLead").textContent = "Anno fiscale " + year + ": importa il PDF nel software fiscale, ad esempio e-tax " +
+    "(i dati leggibili dalla macchina sono nei codici a barre). L'XML contiene gli stessi dati, per archivio o verifica.";
   const warnLines = state.lastLog.filter((l) => /warning|error|mismatch/i.test(l));
   const warnBox = $("resultWarnings");
   if (warnLines.length) {
-    warnBox.innerHTML = "<b>The log contains " + warnLines.length +
-      " line(s) with warnings or errors — please review them:</b><br>" +
+    warnBox.innerHTML = "<b>Il registro contiene " + warnLines.length +
+      " righe con avvisi o errori: controllale.</b><br>" +
       warnLines.slice(0, 12).map((l) => "· " + l.replace(/</g, "&lt;")).join("<br>") +
       (warnLines.length > 12 ? "<br>…" : "");
     warnBox.style.display = "";
