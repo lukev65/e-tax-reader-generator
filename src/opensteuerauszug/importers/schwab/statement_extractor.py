@@ -1,0 +1,494 @@
+import re
+import decimal
+from datetime import datetime, timedelta
+import os
+import argparse
+import logging
+from typing import Any, List, Tuple, Union
+
+from pypdf import PdfReader, errors
+
+# Use Decimal for precise financial calculations
+decimal.getcontext().prec = 20  # Set precision for Decimal
+
+# Define regex patterns for various data points
+CLOSING_PRICE_PATTERN = r"Closing Price on (\d{2}/\d{2}/\d{4}) *: (\$[\d,.]+)"
+ACCOUNT_SUMMARY_PATTERN = r"Account Summary: \w+"
+PERIOD_PATTERN = r"For Period: (\d{2}/\d{2}/\d{4}) - (\d{2}/\d{2}/\d{4})"
+STOCK_HEADER_PATTERN = r'Opening\s*Closing\s*Closing\s+Share Price\s*Closing\s+Value\s+'
+STOCK_SUMMARY_PATTERN = re.compile(
+    r'Stock Summary:[^0-9]*?'
+    r'Opening\s*Closing\s*\s*Share Price\s*\s+Value\s*'
+    r'([\d,.]+)\s+'  # Group 1: Opening Shares
+    r'([\d,.]+)\s+'  # Group 2: Closing Shares
+    r'(\$[\d,.]+)\s+'  # Group 3: Closing Share Price
+    r'(\$[\d,.]+)\s',  # Group 4: Closing Value
+    re.DOTALL | re.IGNORECASE,
+)
+CASH_SUMMARY_PATTERN = re.compile(
+    r'Cash Summary:\s*'
+    r'(\$[\d,.]+)\s+'  # Group 1: Opening Cash
+    r'(\$[\d,.]+)\s+'  # Group 2: Closing Cash
+    r'(\$[\d,.]+)\s',  # Group 3: Closing Value
+    re.DOTALL | re.IGNORECASE,
+)
+
+from opensteuerauszug.model.position import SecurityPosition, CashPosition
+from opensteuerauszug.model.ech0196 import SecurityStock
+
+
+class StatementExtractor:
+    """
+    Reads a PDF statement file, extracts data assumed to be from a
+    Charles Schwab account statement similar to the provided example.
+    Requires the PyPDF2 library to be installed (`pip install pypdf2`).
+    """
+
+    def __init__(self, pdf_file_path):
+        """
+        Initializes the extractor by reading the text content from the PDF file.
+
+        Args:
+            pdf_file_path (str): The path to the PDF statement file.
+
+        Raises:
+            FileNotFoundError: If the pdf_file_path does not exist.
+            ImportError: If PyPDF2 is not installed.
+            Exception: For errors during PDF processing.
+        """
+        if not os.path.exists(pdf_file_path):
+            # This error will be caught by the try...except in main()
+            raise FileNotFoundError(f"Error: The file '{pdf_file_path}' was not found.")
+
+        self.pdf_path = pdf_file_path
+        self.text_content = ""
+        self.pdf_author = None  # To store the author of the PDF
+        self.extracted_data = None  # To store extracted data
+
+        try:
+            with open(self.pdf_path, "rb") as f:
+                reader = PdfReader(f)
+                self.pdf_author = reader.metadata.author if reader.metadata and reader.metadata.author else "Unknown"  # type: ignore
+                num_pages = len(reader.pages)
+                print(f"Reading {num_pages} pages from '{self.pdf_path}'...")
+                for i, page in enumerate(reader.pages):
+                    try:
+                        page_text = page.extract_text(extraction_mode="layout")
+                        if page_text:  # Ensure text was extracted
+                            self.text_content += page_text
+                        else:
+                            print(f"Warning: No text extracted from page {i+1}.")
+                    except Exception as page_err:
+                        # Catch potential issues during text extraction for a specific page
+                        print(f"Warning: Could not extract text from page {i+1}. Error: {page_err}")
+                    # Add a separator between pages for potentially better regex matching
+                    if i < num_pages - 1:
+                        self.text_content += "\n--- PAGE BREAK ---\n"
+            print("PDF reading complete.")
+            if not self.text_content.strip():
+                print("Warning: No text content could be extracted from the PDF.")
+
+        except errors.PdfReadError as pdf_err:
+            raise Exception(
+                f"Error reading PDF file '{self.pdf_path}'. It might be corrupted or password-protected. Details: {pdf_err}"
+            )
+        except Exception as e:
+            # Catch other potential file reading or PyPDF2 errors
+            raise Exception(f"Error processing PDF file '{self.pdf_path}': {e}")
+
+    def _clean_numeric_string(self, num_str):
+        """Removes currency symbols, commas, newline chars and converts to Decimal."""
+        if not num_str:
+            return None
+        # Remove $, ,, \n, and leading/trailing whitespace
+        cleaned = re.sub(r'[$,\n"]', '', num_str).strip()
+        try:
+            return decimal.Decimal(cleaned)
+        except decimal.InvalidOperation:
+            print(f"Warning: Could not convert '{cleaned}' (original: '{num_str}') to Decimal.")
+            return None
+
+    def is_statement(self):
+        """
+        Detects if the extracted text content resembles the target statement format.
+
+        Returns:
+            bool: True if the content matches expected patterns, False otherwise.
+        """
+        if self.pdf_author is None or not re.search(r"SCHWAB", self.pdf_author, re.IGNORECASE):
+            print(
+                f"Warning: Author {self.pdf_author} does not contain SCHWAB, skipping format check."
+            )
+            return False
+
+        if not self.text_content.strip():
+            print("Warning: Cannot check format, no text content available.")
+            return False
+
+        # Check for key identifiers and structural elements
+        patterns = [r"Account Statement", ACCOUNT_SUMMARY_PATTERN]
+
+        # Check if all patterns are found in the text
+        all_found = all(
+            re.search(pattern, self.text_content, re.IGNORECASE | re.MULTILINE)
+            for pattern in patterns
+        )
+        if not all_found:
+            if re.search(r"Account Number", self.text_content, re.IGNORECASE | re.MULTILINE):
+                print("NOTE: Found likely main brokerage stagement. Ignoring.")
+            else:
+                print("Warning: Unknown Schwab document.")
+            # print("Debug: Some statement identification patterns not found.")
+            # Optionally print which patterns failed for debugging
+            # for i, pattern in enumerate(patterns):
+            #     if not re.search(pattern, self.text_content, re.IGNORECASE | re.MULTILINE):
+            #         print(f"  - Pattern failed: {pattern}")
+        return all_found
+
+    def extract_data(self):
+        """
+        Extracts statement end date, symbol, closing shares, closing price,
+        and closing value from the text content read from the PDF.
+
+        Returns:
+            dict: A dictionary containing the extracted data, or None if extraction fails
+                  or if the text doesn't match the statement format.
+                  Keys: 'end_date', 'symbol', 'closing_shares', 'closing_price', 'closing_value'
+        """
+        if not self.is_statement():
+            return None
+
+        data: dict[str, Any] = {}
+
+        # 1. Extract Statement End Date (No change here)
+        end_date = None
+        match_date = re.search(CLOSING_PRICE_PATTERN, self.text_content)
+        if match_date:
+            try:
+                end_date = datetime.strptime(match_date.group(1), '%m/%d/%Y').date()
+            except ValueError:
+                print("Warning: Could not parse end date from 'Closing Price on' line.")
+
+        period_end = None
+        match_period = re.search(PERIOD_PATTERN, self.text_content)
+        if match_period:
+            try:
+                data['start_date'] = datetime.strptime(match_period.group(1), '%m/%d/%Y').date()
+                period_end = datetime.strptime(match_period.group(2), '%m/%d/%Y').date()
+            except ValueError:
+                print("Warning: Could not parse end date from 'For Period' line.")
+
+        if not end_date and period_end:
+            end_date = period_end
+        data['end_date'] = end_date
+        if not end_date:
+            print("Warning: Could not find statement end date.")
+
+        # 2. Extract Symbol
+        match_symbol = re.search(r"Account Summary: (\w+)", self.text_content, re.IGNORECASE)
+        if match_symbol:
+            data['symbol'] = match_symbol.group(1).upper()  # Capture and uppercase the symbol
+            print(f"Debug: Found symbol: {data['symbol']}")
+        else:
+            data['symbol'] = None
+            print("Warning: Could not find symbol using 'Account Summary:' pattern.")
+            # Optional: Add fallback attempt using the "Closing Price on SYMBOL" line if needed
+            match_symbol_fallback = re.search(
+                r"(\w+) Closing Price on", self.text_content, re.IGNORECASE
+            )
+            if match_symbol_fallback:
+                data['symbol'] = match_symbol_fallback.group(1).upper()
+                print(f"Debug: Found symbol via fallback: {data['symbol']}")
+            else:
+                print("Warning: Could not find symbol via fallback pattern either.")
+
+        # 3. Extract Stock Summary Data (Closing Shares, Price, Value) - (No change here)
+        match_summary = STOCK_SUMMARY_PATTERN.search(self.text_content)
+        if match_summary:
+            data['opening_shares'] = self._clean_numeric_string(match_summary.group(1))
+            data['closing_shares'] = self._clean_numeric_string(match_summary.group(2))
+            data['closing_price'] = self._clean_numeric_string(match_summary.group(3))
+            data['closing_value'] = self._clean_numeric_string(match_summary.group(4))
+            print("Debug: Successfully matched and extracted from stock summary row.")
+        else:
+            print("Warning: Could not find or parse the Stock Summary data row using regex.")
+            data['closing_shares'] = None
+            data['closing_price'] = None
+            data['closing_value'] = None
+
+        # 3. Extract Cacsh Summary Data (Closing Shares, Price, Value) - (No change here)
+        match_cash = CASH_SUMMARY_PATTERN.search(self.text_content)
+        if match_cash:
+            data['opening_cash'] = self._clean_numeric_string(match_cash.group(1))
+            data['closing_cash'] = self._clean_numeric_string(match_cash.group(2))
+            print("Debug: Successfully matched and extracted from cash summary row.")
+
+        # Fallback for Closing Price if not found in summary OR if summary parsing failed (No change here)
+        if data.get('closing_price') is None:
+            print("Debug: Attempting fallback for closing price.")
+            match_price_line = re.search(
+                r"Closing Price on \d{2}/\d{2}/\d{4} +: (\$[\d,.]+)", self.text_content
+            )
+            if match_price_line:
+                data['closing_price'] = self._clean_numeric_string(match_price_line.group(1))
+                print(f"Debug: Found closing price via fallback: {data['closing_price']}")
+            else:
+                print("Warning: Could not find closing price via fallback regex either.")
+
+        # 4. Check if all essential data points were extracted (Now includes symbol)
+        required_keys = ['end_date', 'symbol', 'closing_shares']
+        missing_keys = [key for key in required_keys if data.get(key) is None]
+
+        if missing_keys:
+            print(
+                f"Warning: Failed to extract one or more required data points: {', '.join(missing_keys)}."
+            )
+            return None
+
+        self.extracted_data = data
+        return data
+
+    def verify_calculation(self, tolerance=decimal.Decimal('0.01')):
+        """
+        Verifies if Closing Shares * Closing Price approximately equals Closing Value.
+
+        Args:
+            tolerance (decimal.Decimal): The acceptable difference for the verification.
+                                         Defaults to 0.01 (1 cent).
+
+        Returns:
+            bool: True if the calculation is within the tolerance, False otherwise.
+                  Returns False if data hasn't been extracted successfully or is invalid.
+        """
+        if not self.extracted_data:
+            print("Error: Data not extracted. Cannot perform verification.")
+            return False
+
+        shares = self.extracted_data.get('closing_shares')
+        price = self.extracted_data.get('closing_price')
+        value = self.extracted_data.get('closing_value')
+
+        # Check specifically for the numeric values needed for calculation
+        if None in [shares, price, value]:
+            print(
+                "Error: Missing numeric data for verification (Shares, Price, or Value were not extracted or invalid)."
+            )
+            return False
+
+        try:
+            # Ensure values are Decimal before calculation
+            if (
+                not isinstance(shares, decimal.Decimal)
+                or not isinstance(price, decimal.Decimal)
+                or not isinstance(value, decimal.Decimal)
+            ):
+                print(
+                    "Error: One or more values (shares, price, value) are not valid Decimals for calculation."
+                )
+                return False
+
+            calculated_value = shares * price
+            difference = abs(calculated_value - value)
+
+            print(
+                f"Verification: Shares ({shares}) * Price ({price}) = Calculated Value ({calculated_value})"
+            )
+            print(f"Statement Value: {value}")
+            print(f"Difference: {difference}")
+
+            is_within_tolerance = difference <= tolerance
+            if not is_within_tolerance:
+                print(
+                    f"Warning: Calculated value differs from statement value by more than the tolerance ({tolerance})."
+                )
+            return is_within_tolerance
+
+        except (TypeError, decimal.InvalidOperation) as e:
+            print(
+                f"Error: Could not perform verification due to invalid numeric data or operation error: {e}"
+            )
+            return False
+
+    def _next_business_day(self, d):
+        """Returns the next business day after the given date (skipping Sat/Sun)."""
+        next_day = d + timedelta(days=1)
+        while next_day.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
+            next_day += timedelta(days=1)
+        return next_day
+
+    def extract_positions(self):
+        """
+        Extracts positions in the same format as PositionExtractor:
+        Returns a tuple: (positions, open_date, close_date_plus1, depot)
+        positions: List of (Position, SecurityStock) for both open and close+1 dates
+        open_date: The opening date (start_date)
+        close_date_plus1: The day after the closing date (end_date+1)
+        depot: The magic depot name 'AWARDS'
+        """
+        data = self.extract_data()
+        if not data:
+            return None
+        positions: List[Tuple[Union[SecurityPosition, CashPosition], SecurityStock]] = []
+        depot = 'AWARDS'
+        open_date = data.get('start_date')
+        close_date = data.get('end_date')
+        if not open_date or not close_date:
+            return None
+        close_date_plus1 = self._next_business_day(close_date)
+        # Security position (if symbol and closing_shares)
+        symbol = data.get('symbol')
+        closing_shares = data.get('closing_shares')
+        opening_shares = data.get('opening_shares')
+        closing_value = data.get('closing_value')
+        closing_price = data.get('closing_price')
+        if symbol and closing_shares is not None:
+            pos = SecurityPosition(depot=depot, symbol=symbol, securityType=None)
+            if opening_shares is not None:  # Only add opening if available
+                stock_open = SecurityStock(
+                    referenceDate=open_date,
+                    mutation=False,
+                    quotationType='PIECE',
+                    quantity=opening_shares,
+                    balanceCurrency='USD',
+                )
+                positions.append((pos, stock_open))
+
+            stock_close = SecurityStock(
+                referenceDate=close_date_plus1,
+                mutation=False,
+                quotationType='PIECE',
+                quantity=closing_shares,
+                balanceCurrency='USD',
+            )
+            positions.append((pos, stock_close))
+        # Cash position (if closing_cash)
+        closing_cash = data.get('closing_cash')
+        opening_cash = data.get('opening_cash')
+        if closing_cash is not None:
+            pos = CashPosition(depot=depot, currentCy='USD', cash_account_id=symbol)
+            if opening_cash is not None:  # Only add opening if available
+                stock_open = SecurityStock(
+                    referenceDate=open_date,
+                    mutation=False,
+                    quotationType='PIECE',
+                    quantity=opening_cash,
+                    balanceCurrency='USD',
+                    balance=opening_cash,
+                )
+                positions.append((pos, stock_open))
+
+            stock_close = SecurityStock(
+                referenceDate=close_date_plus1,
+                mutation=False,
+                quotationType='PIECE',
+                quantity=closing_cash,
+                balanceCurrency='USD',
+                balance=closing_cash,
+            )
+            positions.append((pos, stock_close))
+        return positions, open_date, close_date_plus1, depot
+
+
+# --- Sample Main Function ---
+def main():
+    """
+    Main execution function. Parses command-line arguments for the PDF file,
+    creates a StatementExtractor instance, extracts data, and verifies calculations.
+    Requires pypdf: pip install pypdf
+    """
+    # Suppress pypdf warnings to avoid cluttering output
+    logging.getLogger('pypdf').setLevel(logging.ERROR)
+
+    # --- Argument Parsing ---
+    parser = argparse.ArgumentParser(
+        description="Extracts and verifies data from a Charles Schwab PDF account statement.",
+        epilog="Example: python your_script_name.py \"Account Statement_2024-12-31  GOOG.PDF\"",
+    )
+    parser.add_argument(
+        "pdf_file", type=str, help="Path to the PDF statement file to process."  # Argument name
+    )
+    args = parser.parse_args()
+    pdf_file_to_process = args.pdf_file
+    # ---------------------
+
+    # No need to check for pypdf import, as ImportError will be raised if not installed
+
+    print(f"--- Analyzing Statement: {pdf_file_to_process} ---")
+    try:
+        # Instantiation will raise FileNotFoundError if file doesn't exist
+        extractor = StatementExtractor(pdf_file_to_process)
+
+        # Extract the data (this also implicitly checks the format via is_statement())
+        print("\n--- Extracting Data ---")
+        data = extractor.extract_data()  # data is the dictionary returned
+
+        print(extractor.text_content)  # Print the extracted text content for debugging
+
+        print("\n--- Extracted Data ---")
+        # Check if extraction returned a dictionary and if the instance has stored data
+        if data and extractor.extracted_data:
+            print("\nExtracted Data:")
+            # Define the desired order for printing
+            print_order = [
+                'end_date',
+                'start_date',
+                'symbol',
+                'opening_shares',
+                'closing_shares',
+                'closing_price',
+                'closing_value',
+                'opening_cash',
+                'closing_cash',
+            ]
+            for key in print_order:
+                value = extractor.extracted_data.get(key)  # Use .get() for safety
+                # Handle potential None values gracefully for printing
+                print_val = value if value is not None else "Not Found"
+                print(f"- {key.replace('_', ' ').title()}: {print_val}")
+
+            # Verify the calculation (only if numeric data seems present)
+            if all(
+                extractor.extracted_data.get(k) is not None
+                for k in ['closing_shares', 'closing_price', 'closing_value']
+            ):
+                print("\n--- Verifying Calculation ---")
+                is_valid = extractor.verify_calculation()
+                if is_valid:
+                    print(
+                        "\nVerification Result: SUCCESS - Calculated value matches statement value within tolerance."
+                    )
+                else:
+                    # Specific reasons for failure are printed within verify_calculation()
+                    print("\nVerification Result: FAILED")
+            else:
+                print("\n--- Verification Skipped (Missing numeric data) ---")
+
+        else:
+            # Specific warnings/errors are printed within extract_data() or __init__
+            print("\nData extraction failed or statement format not recognized.")
+
+        print("\n--- Extracted Positions ---")
+        extracted_positions = extractor.extract_positions()
+        if extracted_positions:
+            positions, open_date, close_date_plus1, depot = extracted_positions
+            print(f"Open Date: {open_date}")
+            print(f"Close Date Plus 1: {close_date_plus1}")
+            print(f"Depot: {depot}")
+            try:
+                from devtools import debug  # type: ignore[import-untyped]
+
+                debug(positions)
+            except ImportError:
+                print(f"Positions: {positions}")
+        else:
+            print("No positions extracted.")
+
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)  # Print the specific error message from __init__
+    except ImportError as imp_error:
+        print(imp_error)  # Print PyPDF2 import error if it occurs here (shouldn't normally)
+    # let the rest of the exceptions propagate for debugging
+
+
+if __name__ == "__main__":
+    main()

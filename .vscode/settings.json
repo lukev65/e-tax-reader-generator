@@ -1,0 +1,23 @@
+{
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "cSpell.words": [
+        "Differenzbesteuerung",
+        "Eidgenössische",
+        "ESTV",
+        "fillin",
+        "Gerardus",
+        "IBKR",
+        "opensteuerauszug",
+        "pipx",
+        "pytest",
+        "Steuerauszüge",
+        "Steuerverwaltung",
+        "valornumber",
+        "venv",
+        "Vroonhof"
+    ]
+}
