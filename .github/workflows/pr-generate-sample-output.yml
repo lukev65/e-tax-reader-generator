@@ -1,0 +1,64 @@
+name: Generate sample PDF and XML for PR
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  generate-sample-output:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.10"
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Install poppler-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Generate sample PDF from vtandchill_2025.xml
+        run: |
+          uv run --locked --extra dev opensteuerauszug \
+            process \
+            tests/samples/import/ibkr/vtandchill_2025.xml \
+            --importer ibkr \
+            --tax-year 2025 \
+            --kursliste-dir tests/samples/kursliste \
+            --xml-output sample_output.xml \
+            --output sample_output.pdf
+
+      - name: Upload sample output artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-output-pr-${{ github.event.pull_request.number }}
+          path: |
+            sample_output.pdf
+            sample_output.xml
+          retention-days: 14
+
+      - name: Save PR number for downstream workflow
+        run: echo "${{ github.event.pull_request.number }}" > pr_number.txt
+
+      - name: Upload PR number artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-number
+          path: pr_number.txt
+          retention-days: 1
