@@ -122,10 +122,11 @@ def resolve_locked_closure(
     load at runtime.  Markers are evaluated for the build environment; the
     browser smoke test is the safety net for emscripten-only divergence.
 
-    When ``dist_versions`` is given, every requirement on a distribution
-    package must accept the version Pyodide ships; otherwise the page would
-    fail at import time in the browser (e.g. a pydantic-xml release that needs
-    a newer pydantic than Pyodide provides), so the build stops instead.
+    When ``dist_versions`` is given, every requirement that an embedded wheel
+    declares on a distribution package must accept the version Pyodide ships;
+    otherwise the page would fail at import time in the browser (e.g. a
+    pydantic-xml release that needs a newer pydantic than Pyodide provides),
+    so the build stops instead.  Floors in our own pyproject are only reported.
     """
     env: dict = dict(default_environment())
     locked: dict = {}
@@ -144,8 +145,14 @@ def resolve_locked_closure(
             dist_used.add(pyodide_dist[name])
             shipped = (dist_versions or {}).get(name)
             if shipped and req.specifier and not req.specifier.contains(shipped, prereleases=True):
-                origin = f"{parent} needs " if parent else ""
-                conflicts.append(f"{origin}{req}, but Pyodide ships {req.name} {shipped}")
+                if parent is None:
+                    # Our own pyproject floors (e.g. security minimums for the
+                    # CLI) are not import-time requirements of the page.
+                    print(f"Note: pyproject asks for {req}; Pyodide ships {req.name} {shipped}.")
+                else:
+                    conflicts.append(
+                        f"{parent} needs {req}, but Pyodide ships {req.name} {shipped}"
+                    )
             continue  # transitive deps come from the Pyodide lockfile
         key = (name, frozenset(req.extras))
         if key in seen:

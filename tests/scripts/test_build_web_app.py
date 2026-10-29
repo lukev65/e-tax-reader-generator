@@ -134,3 +134,14 @@ def test_locked_closure_accepts_compatible_pyodide_versions(build_web_app):
     )
     assert "pydantic-xml" in locked
     assert "pydantic" in dist_used
+
+
+def test_locked_closure_only_notes_our_own_floors(build_web_app, capsys):
+    # pyproject pins like "requests>=2.33.0" are CLI minimums; Pyodide's older
+    # requests still imports fine, so the build reports it and carries on.
+    dist = {"requests": "requests"}
+    _, dist_used = build_web_app.resolve_locked_closure(
+        ["requests>=2.33.0"], set(), dist, {"requests": "2.32.4"}
+    )
+    assert dist_used == ["requests"]
+    assert "Pyodide ships requests 2.32.4" in capsys.readouterr().out
