@@ -38,6 +38,7 @@ import tempfile
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 from packaging.markers import default_environment
 from packaging.requirements import Requirement
@@ -83,8 +84,8 @@ def read_pyodide_version(template_text: str) -> str:
     return match.group(1)
 
 
-def fetch_pyodide_distribution(version: str) -> dict:
-    """Map canonical package name -> lockfile key for the Pyodide distribution.
+def fetch_pyodide_packages(version: str) -> dict:
+    """Return the ``packages`` table of the version-pinned ``pyodide-lock.json``.
 
     These packages (binary builds like lxml/Pillow among them) are served from
     the version-pinned Pyodide CDN, so they are excluded from the embedded
@@ -93,10 +94,26 @@ def fetch_pyodide_distribution(version: str) -> dict:
     url = f"https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json"
     with urllib.request.urlopen(url) as resp:
         lock = json.load(resp)
-    return {canonicalize_name(name): name for name in lock["packages"]}
+    return lock["packages"]
 
 
-def resolve_locked_closure(root_reqs: list, skip_names: set, pyodide_dist: dict) -> tuple:
+def pyodide_distribution(packages: dict) -> dict:
+    """Map canonical package name -> lockfile key for the Pyodide distribution."""
+    return {canonicalize_name(name): name for name in packages}
+
+
+def pyodide_versions(packages: dict) -> dict:
+    """Map canonical package name -> version shipped by the Pyodide distribution."""
+    return {
+        canonicalize_name(name): info["version"]
+        for name, info in packages.items()
+        if info.get("version")
+    }
+
+
+def resolve_locked_closure(
+    root_reqs: list, skip_names: set, pyodide_dist: dict, dist_versions: Optional[dict] = None
+) -> tuple:
     """Walk the runtime dependency closure of the *installed* environment.
 
     Returns ``(locked, dist_used)`` where ``locked`` maps canonical package
@@ -104,24 +121,36 @@ def resolve_locked_closure(root_reqs: list, skip_names: set, pyodide_dist: dict)
     ``dist_used`` lists the Pyodide-distribution package names the page must
     load at runtime.  Markers are evaluated for the build environment; the
     browser smoke test is the safety net for emscripten-only divergence.
+
+    When ``dist_versions`` is given, every requirement on a distribution
+    package must accept the version Pyodide ships; otherwise the page would
+    fail at import time in the browser (e.g. a pydantic-xml release that needs
+    a newer pydantic than Pyodide provides), so the build stops instead.
     """
     env: dict = dict(default_environment())
     locked: dict = {}
     dist_used: set = set()
-    queue = [Requirement(r) for r in root_reqs]
+    queue: List[Tuple[Requirement, Optional[str]]] = [(Requirement(r), None) for r in root_reqs]
     seen = set()
+    conflicts: list = []
     while queue:
-        req = queue.pop()
+        req, parent = queue.pop()
         name = canonicalize_name(req.name)
         if name in skip_names:
             continue
+        if name in pyodide_dist:
+            # Checked for every requirement, not once per package: each
+            # dependent may constrain the shipped version differently.
+            dist_used.add(pyodide_dist[name])
+            shipped = (dist_versions or {}).get(name)
+            if shipped and req.specifier and not req.specifier.contains(shipped, prereleases=True):
+                origin = f"{parent} needs " if parent else ""
+                conflicts.append(f"{origin}{req}, but Pyodide ships {req.name} {shipped}")
+            continue  # transitive deps come from the Pyodide lockfile
         key = (name, frozenset(req.extras))
         if key in seen:
             continue
         seen.add(key)
-        if name in pyodide_dist:
-            dist_used.add(pyodide_dist[name])
-            continue  # transitive deps come from the Pyodide lockfile
         try:
             dist = importlib.metadata.distribution(req.name)
         except importlib.metadata.PackageNotFoundError:
@@ -141,7 +170,15 @@ def resolve_locked_closure(root_reqs: list, skip_names: set, pyodide_dist: dict)
                 extras = req.extras or {""}
                 if not any(dep.marker.evaluate({**env, "extra": e}) for e in extras):
                     continue
-            queue.append(dep)
+            queue.append((dep, f"{req.name} {dist.version}"))
+    if conflicts:
+        raise SystemExit(
+            "The installed packages need versions the Pyodide distribution does not "
+            "ship, so the web app would fail in the browser:\n  "
+            + "\n  ".join(conflicts)
+            + "\nInstall the versions pinned in uv.lock (uv sync --locked --extra dev) "
+            "and build again."
+        )
     return locked, sorted(dist_used)
 
 
@@ -274,12 +311,15 @@ def main(argv=None) -> int:
     template_text = args.template.read_text(encoding="utf-8")
     pyodide_version = read_pyodide_version(template_text)
     print(f"Pyodide distribution: v{pyodide_version}")
-    pyodide_dist = fetch_pyodide_distribution(pyodide_version)
+    pyodide_packages = fetch_pyodide_packages(pyodide_version)
+    pyodide_dist = pyodide_distribution(pyodide_packages)
 
     pypi_reqs, git_reqs, version = collect_dependencies(REPO_ROOT / "pyproject.toml")
     skip_names = {canonicalize_name(Requirement(req).name) for req in git_reqs}
     skip_names.add(canonicalize_name("opensteuerauszug"))
-    locked, dist_used = resolve_locked_closure(pypi_reqs, skip_names, pyodide_dist)
+    locked, dist_used = resolve_locked_closure(
+        pypi_reqs, skip_names, pyodide_dist, pyodide_versions(pyodide_packages)
+    )
     print(f"From Pyodide distribution ({len(dist_used)}): {', '.join(dist_used)}")
     locked_desc = ", ".join(f"{n}=={v}" for n, v in sorted(locked.items()))
     print(f"Locked PyPI wheels ({len(locked)}): {locked_desc}")

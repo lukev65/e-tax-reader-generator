@@ -100,3 +100,37 @@ def test_rendered_html_contains_parseable_bundle_json(build_web_app, tmp_path):
 def test_render_html_rejects_template_without_placeholder(build_web_app):
     with pytest.raises(ValueError):
         build_web_app.render_html("<html></html>", {"version": "1"})
+
+
+def test_pyodide_lock_tables(build_web_app):
+    packages = {
+        "pydantic": {"version": "2.12.5"},
+        "Pillow": {"version": "11.3.0"},
+        "micropip": {},
+    }
+    assert build_web_app.pyodide_distribution(packages)["pillow"] == "Pillow"
+    versions = build_web_app.pyodide_versions(packages)
+    assert versions == {"pydantic": "2.12.5", "pillow": "11.3.0"}
+
+
+def test_locked_closure_rejects_requirements_pyodide_cannot_meet(build_web_app):
+    # The installed pydantic-xml declares "pydantic>=2.6.0,!=2.10.0b1"; a
+    # Pyodide pydantic below that must stop the build with a clear message
+    # instead of producing a page that fails at import time in the browser.
+    dist = {"pydantic": "pydantic", "pydantic-core": "pydantic_core", "lxml": "lxml"}
+    with pytest.raises(SystemExit) as excinfo:
+        build_web_app.resolve_locked_closure(["pydantic-xml"], set(), dist, {"pydantic": "2.5.0"})
+    message = str(excinfo.value)
+    assert "pydantic-xml" in message and "Pyodide ships pydantic 2.5.0" in message
+    assert "uv sync --locked" in message
+
+
+def test_locked_closure_accepts_compatible_pyodide_versions(build_web_app):
+    import pydantic
+
+    dist = {"pydantic": "pydantic", "pydantic-core": "pydantic_core", "lxml": "lxml"}
+    locked, dist_used = build_web_app.resolve_locked_closure(
+        ["pydantic-xml"], set(), dist, {"pydantic": pydantic.VERSION}
+    )
+    assert "pydantic-xml" in locked
+    assert "pydantic" in dist_used
